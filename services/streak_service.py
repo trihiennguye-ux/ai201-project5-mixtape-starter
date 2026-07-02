@@ -29,7 +29,7 @@ def record_listening_event(user_id: str, song_id: str) -> ListeningEvent:
     now = datetime.now(timezone.utc)
 
     # Create the listening event
-    event = ListeningEvent(user_id=user_id, song_id=song_id, listened_at=now)
+    event = ListeningEvent(user_id=user_id, song_id=song_id, listened_at=now) 
     db.session.add(event)
 
     # Update the streak
@@ -70,7 +70,7 @@ def update_listening_streak(user: User, now: datetime) -> None:
     if days_since_last == 0:
         # Already updated today — no change needed
         return
-    elif days_since_last == 1 and today.weekday() != 6:
+    elif days_since_last == 1: # First bug fix: all days should be counted, not weekdays only
         user.listening_streak += 1
     else:
         user.listening_streak = 1
