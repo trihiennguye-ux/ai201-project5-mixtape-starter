@@ -1,5 +1,10 @@
 # Mixtape Codebase Map
 
+## AI Usage
+I used AI tools as a debugging assistant while working through the bug fixes and the submission writeup. I asked it to trace the flow from routes into services, summarize what each service was supposed to return, and explain why certain bugs were happening, such as duplicate search results, the missing rating notification, and the playlist entry that was getting dropped. It also helped me turn those observations into the Bug Reproduction Notes and Root Cause Analysis sections in a consistent format.
+
+I still verified the important details myself by reading the actual model definitions, service code, and tests, then checking the behavior against the test suite. In a few cases the AI was helpful but not sufficient on its own: for example, I had to confirm the notification behavior in `notification_service.py` against the route and model flow, and I had to check the playlist and search bugs against their tests to make sure the explanation matched the real failure. When the AI suggested an interpretation that was too broad or left an edge case unclear, I treated it as a lead and confirmed the final answer by reading the code directly.
+
 ## Project Overview
 Mixtape is a Flask social music app. Users can share songs, build collaborative playlists, track listening streaks, view friends' recent listening activity, and receive notifications when other people interact with their shared songs.
 
