@@ -112,6 +112,11 @@ The project is intentionally split so that each feature can be traced from endpo
 
 **Trigger condition:** A song with multiple tags must match the search terms by title or artist.
 
+### Issue #4: I got notified when a friend added my song to a playlist but not when they rated it
+**How I reproduced it:** I had another user rate one of my shared songs and then checked my notifications. The app created notifications for playlist additions, but the rating action did not create a new notification, so the event never appeared in my notification list.
+
+**Trigger condition:** A different user rates a song that I shared.
+
 ### Issue #5: The last song in a playlist never shows up
 **How I reproduced it:** I created a playlist with several songs and requested its song list through the playlist endpoint. The response consistently omitted the final song in the playlist, so a 5-song playlist came back with only 4 songs.
 
@@ -150,6 +155,22 @@ The project is intentionally split so that each feature can be traced from endpo
 
 5. **Your fix and side-effect check**
    I removed the unnecessary join so the query returns each matching song only once and still relies on Song.to_dict() to include tags. That fixes the duplication at the source instead of trying to deduplicate the response afterward. After the change, I ran [tests/test_search.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_search.py), and the search suite passed, including the multi-tag case.
+
+### Issue #4: I got notified when a friend added my song to a playlist but not when they rated it
+1. **Issue number and title**
+	Issue #4: I got notified when a friend added my song to a playlist but not when they rated it
+
+2. **How you reproduced it**
+	I had another user rate one of my shared songs and then checked my notifications. The playlist-add notification flow worked, but the rating action did not create a new notification, so nothing showed up for the rating event.
+
+3. **How you found the root cause**
+	I started from [README.md](README.md) and the rating route in [routes/songs.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/routes/songs.py) because the bug was tied to POST /songs/<song_id>/rate. That led me into [services/notification_service.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/services/notification_service.py), where `rate_song()` handled the rating write. The missing piece was that the function saved the rating but did not create a corresponding notification for the song owner.
+
+4. **The root cause**
+	The rating service only persisted the `Rating` record and stopped there. Unlike the playlist-add flow, it had no call to `create_notification()` for the song sharer, so the notification table never received a `song_rated` entry when someone else rated the song.
+
+5. **Your fix and side-effect check**
+	I added a `song_rated` notification after the rating commit so the owner is notified when another user rates their shared song. That fixes the root cause because the rating workflow now mirrors the existing playlist notification pattern instead of ending after the database update. After the change, I rechecked the relevant service flow and confirmed the rating path now creates the notification as expected.
 
 ### Issue #5: The last song in a playlist never shows up
 1. **Issue number and title**
