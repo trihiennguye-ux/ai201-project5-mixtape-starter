@@ -99,3 +99,38 @@ The app follows a few consistent patterns throughout the repo:
 
 ## Overall Structure
 The project is intentionally split so that each feature can be traced from endpoint to service to model. That makes it easier to reason about bugs, test individual behaviors, and keep the API layer separate from the database logic.
+
+## Bug Reproduction Notes
+
+### Issue #1: My listening streak keeps resetting
+**How I reproduced it:** I set a user’s `last_listened_at` to Saturday and then recorded another listen on Sunday, using the same user and two consecutive calendar dates. The expected behavior was that the streak would increment from 1 to 2, but the app treated Sunday as a reset condition and returned a streak of 1.
+
+**Trigger condition:** This only shows up when the previous listen was exactly one day earlier and the new listen happens on Sunday.
+
+### Issue #3: The same song keeps showing up twice in search
+**How I reproduced it:** I used a song that has multiple tags in the seed/test data, then searched for that song by title. The query returned the same song multiple times because the search joins through the tag table, which multiplies rows for songs with more than one tag.
+
+**Trigger condition:** A song with multiple tags must match the search terms by title or artist.
+
+### Issue #5: The last song in a playlist never shows up
+**How I reproduced it:** I created a playlist with several songs and requested its song list through the playlist endpoint. The response consistently omitted the final song in the playlist, so a 5-song playlist came back with only 4 songs.
+
+**Trigger condition:** Any playlist with at least one song exposes the bug, because the service slices off the last item before returning results.
+
+# Bug Root Cause Analysis
+
+### Issue #1: My listening streak keeps resetting
+1. **Issue number and title**
+	Issue #1: My listening streak keeps resetting
+
+2. **How you reproduced it**
+	I used the streak test setup and a controlled pair of dates. First I updated a user's streak with a Saturday timestamp, then I updated the same user again with a Sunday timestamp. That reproduces the reported bug because the second listen is exactly one calendar day later and crosses the Saturday-to-Sunday boundary that was failing.
+
+3. **How you found the root cause**
+	I started from [tests/test_streaks.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_streaks.py) because the failing case was already encoded there as the Sunday test. From there I opened [services/streak_service.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/services/streak_service.py) and traced `update_listening_streak()`. The moment that made the cause clear was the conditional `days_since_last == 1 and today.weekday() != 6`, because that explicitly treated Sunday as a non-consecutive day even when the dates were one day apart.
+
+4. **The root cause**
+	The streak update logic had an extra Sunday exception baked into the consecutive-day check. Instead of incrementing whenever the previous listen was exactly one day ago, it refused to increment when the new day was Sunday, so a valid Saturday-to-Sunday sequence was incorrectly reset.
+
+5. **Your fix and side-effect check**
+	I removed the Sunday-only exclusion so any one-day gap now increments the streak. That fixes the root cause because the logic once again matches the stated rule: consecutive calendar days should count, regardless of weekday. After the change, I ran [tests/test_streaks.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_streaks.py), and the full streak suite passed, which also confirmed that same-day no-change and skipped-day reset behavior still worked.
