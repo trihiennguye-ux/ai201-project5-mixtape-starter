@@ -150,3 +150,19 @@ The project is intentionally split so that each feature can be traced from endpo
 
 5. **Your fix and side-effect check**
    I removed the unnecessary join so the query returns each matching song only once and still relies on Song.to_dict() to include tags. That fixes the duplication at the source instead of trying to deduplicate the response afterward. After the change, I ran [tests/test_search.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_search.py), and the search suite passed, including the multi-tag case.
+
+### Issue #5: The last song in a playlist never shows up
+1. **Issue number and title**
+	Issue #5: The last song in a playlist never shows up
+
+2. **How you reproduced it**
+	I created a playlist with several songs and requested its songs through the playlist endpoint. The response returned every song except the last one, so a 5-song playlist came back with only 4 songs.
+
+3. **How you found the root cause**
+	I started from [tests/test_playlists.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_playlists.py) because the failing behavior was already described there. From there I traced the request into [services/playlist_service.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/services/playlist_service.py) and checked the return path in `get_playlist_songs()`. The issue was in the final return statement, which had an exception that removed the last item before sending the list back.
+
+4. **The root cause**
+	The playlist retrieval logic was collecting all songs in the correct order, but then it applied a last-song exception when returning the result. That meant the service was intentionally dropping the final playlist entry even though the query itself had already loaded the full playlist.
+
+5. **Your fix and side-effect check**
+	I removed the last-song exception so `get_playlist_songs()` now returns the complete ordered list. That fixes the bug at the source because the service no longer truncates valid data after querying it. After the change, I ran [tests/test_playlists.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_playlists.py), and the playlist suite passed, including the order and empty-playlist cases.
