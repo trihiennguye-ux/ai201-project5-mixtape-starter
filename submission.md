@@ -134,3 +134,19 @@ The project is intentionally split so that each feature can be traced from endpo
 
 5. **Your fix and side-effect check**
 	I removed the Sunday-only exclusion so any one-day gap now increments the streak. That fixes the root cause because the logic once again matches the stated rule: consecutive calendar days should count, regardless of weekday. After the change, I ran [tests/test_streaks.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_streaks.py), and the full streak suite passed, which also confirmed that same-day no-change and skipped-day reset behavior still worked.
+
+### Issue #3: The same song keeps showing up twice in search
+1. **Issue number and title**
+   Issue #3: The same song keeps showing up twice in search
+
+2. **How you reproduced it**
+   I used a song with multiple tags in the search test data and searched for that song by title. The response returned the same song more than once because each matching tag row created another copy of the song in the query results.
+
+3. **How you found the root cause**
+   I started from [tests/test_search.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_search.py) because the duplicate-result behavior was already captured there with a multi-tag song. From there I traced the search flow into [services/search_service.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/services/search_service.py). The key clue was the query structure: it joined through song_tags, which expands one Song row into multiple rows when that song has more than one tag.
+
+4. **The root cause**
+   The search query was joining the song table to the song-tag association table even though the response only needed matched songs and their serialized tags. That join multiplied rows for songs with multiple tags, so one logical song became several SQL result rows and then several JSON entries.
+
+5. **Your fix and side-effect check**
+   I removed the unnecessary join so the query returns each matching song only once and still relies on Song.to_dict() to include tags. That fixes the duplication at the source instead of trying to deduplicate the response afterward. After the change, I ran [tests/test_search.py](/Users/hiennguyen/CodePath/ai201-project5-mixtape-starter/tests/test_search.py), and the search suite passed, including the multi-tag case.

@@ -29,7 +29,7 @@ def record_listening_event(user_id: str, song_id: str) -> ListeningEvent:
     now = datetime.now(timezone.utc)
 
     # Create the listening event
-    event = ListeningEvent(user_id=user_id, song_id=song_id, listened_at=now)
+    event = ListeningEvent(user_id=user_id, song_id=song_id, listened_at=now) 
     db.session.add(event)
 
     # Update the streak
